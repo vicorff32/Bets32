@@ -59,9 +59,8 @@ async def monitorar(context):
         msg = f"⏱️ {tempo} min - Botafogo x Corinthians\n"
         msg += f"🔢 Placar: {gols['home']} x {gols['away']}\n"
 
-        # Acrescentar escanteios se quiser
         for estat in estatisticas:
-            if estat['team']['name'] == 'Botafogo' or estat['team']['name'] == 'Corinthians':
+            if estat['team']['name'] in ['Botafogo', 'Corinthians']:
                 for s in estat['statistics']:
                     if s['type'] == 'Corner Kicks':
                         msg += f"🚩 Escanteios {estat['team']['name']}: {s['value']}\n"
@@ -81,4 +80,4 @@ async def main():
     await application.run_polling()
 
 if __name__ == '__main__':
-    asyncio.get_event_loop().run_until_complete(main())
+    asyncio.run(main())
