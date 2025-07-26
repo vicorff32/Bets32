@@ -16,37 +16,59 @@ bot = Bot(token=token)
 def buscar_time_id(nome_time):
     url = f'https://v3.football.api-sports.io/teams?search={nome_time}'
     headers = {'x-apisports-key': api_key}
-    r = requests.get(url, headers=headers).json()
-    return r['response'][0]['team']['id']
+    try:
+        r = requests.get(url, headers=headers, timeout=10)
+        r.raise_for_status()
+        data = r.json()
+        return data['response'][0]['team']['id']
+    except Exception as e:
+        print(f"[ERRO buscar_time_id] {e}")
+        return None
 
 def buscar_jogo_ao_vivo(id_casa, id_fora):
     url = f'https://v3.football.api-sports.io/fixtures?live=all&team={id_casa}'
     headers = {'x-apisports-key': api_key}
-    r = requests.get(url, headers=headers).json()
-    jogos = r['response']
-    for jogo in jogos:
-        home = jogo['teams']['home']['id']
-        away = jogo['teams']['away']['id']
-        if (home == id_casa and away == id_fora) or (home == id_fora and away == id_casa):
-            return jogo
+    try:
+        r = requests.get(url, headers=headers, timeout=10)
+        r.raise_for_status()
+        jogos = r.json()['response']
+        for jogo in jogos:
+            home = jogo['teams']['home']['id']
+            away = jogo['teams']['away']['id']
+            if (home == id_casa and away == id_fora) or (home == id_fora and away == id_casa):
+                return jogo
+    except Exception as e:
+        print(f"[ERRO buscar_jogo_ao_vivo] {e}")
     return None
 
 def buscar_estatisticas(fixture_id):
     url = f'https://v3.football.api-sports.io/fixtures/statistics?fixture={fixture_id}'
     headers = {'x-apisports-key': api_key}
-    r = requests.get(url, headers=headers).json()
-    return r['response']
+    try:
+        r = requests.get(url, headers=headers, timeout=10)
+        return r.json()['response']
+    except Exception as e:
+        print(f"[ERRO buscar_estatisticas] {e}")
+        return []
 
 def buscar_eventos(fixture_id):
     url = f'https://v3.football.api-sports.io/fixtures/events?fixture={fixture_id}'
     headers = {'x-apisports-key': api_key}
-    r = requests.get(url, headers=headers).json()
-    return r['response']
+    try:
+        r = requests.get(url, headers=headers, timeout=10)
+        return r.json()['response']
+    except Exception as e:
+        print(f"[ERRO buscar_eventos] {e}")
+        return []
 
-# === Monitoramento contínuo ===
 async def monitorar(context):
     id_casa = buscar_time_id('Botafogo')
     id_fora = buscar_time_id('Corinthians')
+
+    if not id_casa or not id_fora:
+        await context.bot.send_message(chat_id=chat_id, text="❌ Não foi possível buscar os times.")
+        return
+
     jogo = buscar_jogo_ao_vivo(id_casa, id_fora)
 
     if jogo:
@@ -54,7 +76,6 @@ async def monitorar(context):
         tempo = jogo['fixture']['status']['elapsed']
         gols = jogo['goals']
         estatisticas = buscar_estatisticas(fixture_id)
-        eventos = buscar_eventos(fixture_id)
 
         msg = f"⏱️ {tempo} min - Botafogo x Corinthians\n"
         msg += f"🔢 Placar: {gols['home']} x {gols['away']}\n"
@@ -69,15 +90,12 @@ async def monitorar(context):
     else:
         await context.bot.send_message(chat_id=chat_id, text="⚠️ Jogo ainda não começou ou não está ao vivo.")
 
-# === Inicialização no Render ===
 async def main():
     application = Application.builder().token(token).build()
     job_queue: JobQueue = application.job_queue
-
     job_queue.run_repeating(monitorar, interval=60, first=5)
-
     print("🤖 Bot está online e monitorando o jogo.")
     await application.run_polling()
 
-if __name__ == '__main__':
+if _name_ == '_main_':
     asyncio.run(main())
