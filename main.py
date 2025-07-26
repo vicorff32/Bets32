@@ -80,5 +80,5 @@ async def main():
     print("🤖 Bot está online e monitorando o jogo.")
     await application.run_polling()
 
-if _name_ == '_main_':
+if __name__ == '__main__':
     asyncio.get_event_loop().run_until_complete(main())
